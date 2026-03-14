@@ -1,0 +1,127 @@
+---
+name: wecom-bot
+description: This skill should be used when the user asks to "开始", "start wecom bot", "listen for wecom messages", "monitor wecom", "启动企业微信机器人", "开始监听企业微信", "start listening", or needs to set up bidirectional communication with users via WeCom (Enterprise WeChat) intelligent bot. TRIGGER when the task involves receiving messages from or sending replies to WeCom. DO NOT TRIGGER for general chat unrelated to the WeCom bot system.
+version: 1.0.0
+---
+
+# WeCom Bot - Enterprise WeChat Bidirectional Communication
+
+Enable bidirectional messaging with users through an Enterprise WeChat (WeCom) intelligent bot via WebSocket.
+
+## Quick Start
+
+Execute these steps in order to start the bot and begin the listen-reply loop.
+
+### 1. Start Bot Process (Background)
+
+```bash
+python .claude/skills/wecom-bot/scripts/wecom_bot.py &disown 2>/dev/null &
+```
+
+This starts a WebSocket long connection to `wss://openws.work.weixin.qq.com`. Incoming messages are saved to `messages.json`. Outgoing messages are read from `outbox.json` and sent via WebSocket.
+
+### 2. Get Current Message Count
+
+```bash
+python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
+```
+
+Store this number as `<COUNT>` for the listener.
+
+### 3. Launch Background Listener Agent
+
+Spawn a background Agent with `run_in_background=true`:
+
+```
+prompt: "Run this command in foreground and wait for it to complete (timeout up to 310 seconds).
+Do NOT use any other tools, just run this one Bash command and return the output:
+python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 300
+Working directory: C:\Users\29441\Desktop\Claude-Agent"
+```
+
+The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 300 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
+
+### 4. Process Incoming Messages
+
+When the listener agent completes (automatic notification):
+
+1. Read the end of `messages.json` with the **Read tool** using a large offset (do NOT rely on terminal output — Windows terminal garbles Chinese)
+2. Find the latest message(s) and extract the `content` field for the user's request
+
+### 5. Reply to User
+
+**Primary method — ws_send** (writes to outbox.json, bot sends via WebSocket):
+
+```bash
+python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "Reply content here"
+```
+
+For task requests: first reply "收到" (acknowledged), then execute the task, then send results back.
+
+### 6. Progress Reporting
+
+**IMPORTANT**: To avoid leaving users waiting without feedback, proactively report progress during task execution:
+
+- **Before starting**: Reply "收到，正在处理..." (acknowledged, working on it)
+- **During execution**: Send progress updates at key milestones (e.g., "正在搜索相关信息...", "已完成第1步，正在处理第2步...")
+- **On completion**: Send the final result
+- **On error**: Immediately notify the user with the error details and next steps
+
+For multi-step tasks, send at least one progress update every 30-60 seconds so the user knows the task is still being worked on. Never let the user wait more than 1 minute without any feedback.
+
+### 7. Loop with Concurrent Listening
+
+**CRITICAL RULE: ZERO LISTENING GAP.** Whenever a background listener agent completes (whether it detected a new message or timed out), you MUST immediately:
+1. Read `messages.json` to check for new messages
+2. Get the current message count
+3. Launch a new background listener agent
+
+There must NEVER be a period where no listener agent is running. This applies during task execution, between tasks, and at all other times. Failing to restart the listener immediately causes missed messages.
+
+**During task execution:**
+
+1. **Launch a background listener agent** (same as Step 3) alongside the task work
+2. **When the listener completes** (automatic notification), immediately read messages, process them, get new count, and launch a new listener — even if you are in the middle of task work
+3. **At each key step** of the task, also quickly check `messages.json` count as a safety net:
+   ```bash
+   python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
+   ```
+4. **If new messages are detected**, read `messages.json` to check content:
+   - If the user sent "取消" / "停止" / "cancel" → stop the current task and acknowledge
+   - If the user sent a new question → finish or pause current task, then handle the new request
+   - Otherwise → continue the current task
+5. **After task completion**, get the new message count, check for any missed messages, then launch a new listener agent. Repeat.
+
+## Reply Channels
+
+| Priority | Method | Command | Notes |
+|----------|--------|---------|-------|
+| 1 | WebSocket ws_send | `python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "msg"` | Recommended. Via outbox queue |
+| 2 | response_url | `python .claude/skills/wecom-bot/scripts/wecom_tool.py reply "msg"` | One-time use, expires quickly |
+| 3 | Webhook (group) | `python .claude/skills/wecom-bot/scripts/wecom_tool.py send "msg"` | Group only, no expiry |
+
+## Key Files
+
+| File | Role |
+|------|------|
+| `.claude/skills/wecom-bot/scripts/wecom_bot.py` | WebSocket bot process (websocket-client lib) |
+| `.claude/skills/wecom-bot/scripts/wecom_tool.py` | CLI tool: send / send_md / reply / ws_send / receive / ask |
+| `.claude/skills/wecom-bot/scripts/watch_messages.py` | New-message watcher (for subagent polling) |
+| `messages.json` | Received message store (includes req_id for ws reply) |
+| `outbox.json` | Outbound message queue (bot checks every 1s) |
+
+## Technical Notes
+
+- Reply msgtype must be `markdown` (text/stream returns errcode 40008)
+- Use `websocket-client` (sync), not `websockets` (async) — the latter has protocol compatibility issues
+- Bot auto-reconnects on disconnect with incremental delay (3s → 30s)
+- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 5 minutes
+- Outbox messages are retained during disconnection and auto-sent after reconnect (never lost)
+- Chinese content in terminal is garbled on Windows — always use Read tool on `messages.json`
+- Use the standalone `.claude/skills/wecom-bot/scripts/watch_messages.py` script, not inline Python in subagent commands
+- **Long messages will silently fail to send.** Keep each message under ~500 characters. For longer content, split into multiple messages with `sleep 2` between sends to avoid ordering issues
+
+## Additional Resources
+
+- **`references/message-format.md`** — Detailed message JSON structure, field descriptions, and reply method details
+- **`scripts/start.sh`** — Quick-start script to launch bot and verify connection

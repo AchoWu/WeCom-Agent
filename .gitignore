@@ -1,0 +1,25 @@
+# 环境变量（含凭据）
+.env
+
+# 运行时数据
+messages.json
+outbox.json
+
+# 用户本地配置
+.claude/settings.local.json
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
