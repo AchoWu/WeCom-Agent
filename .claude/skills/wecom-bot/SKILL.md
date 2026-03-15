@@ -78,6 +78,8 @@ For multi-step tasks, send at least one progress update every 30-60 seconds so t
 
 There must NEVER be a period where no listener agent is running. This applies during task execution, between tasks, and at all other times. Failing to restart the listener immediately causes missed messages.
 
+**CRITICAL RULE: NEVER DISCONNECT WITHOUT USER CONSENT.** Even if the user has not sent any messages for a long time, you must NOT stop listening or disconnect on your own. If you notice extended silence (e.g., multiple consecutive timeouts), send a friendly message via ws_send asking the user if they want to disconnect, for example: "您好，检测到已经较长时间没有新消息了，请问需要断开连接吗？" Only if the user explicitly confirms (e.g., "好的", "断开", "是", "停止") should you stop listening and end the session. If the user does not respond or says no, continue the listen loop as normal.
+
 **During task execution:**
 
 1. **Launch a background listener agent** (same as Step 3) alongside the task work
