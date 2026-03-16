@@ -22,7 +22,13 @@ If `.claude/settings.local.json` does not exist, ask the user for their workspac
 }
 ```
 
-- Ask user: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
+- Ask user for workspace directory: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
+- Check if `.env` exists. If not, ask user for Bot ID and Secret, then create `.env`:
+  ```
+  WECOM_BOT_ID=<user_provided_bot_id>
+  WECOM_BOT_SECRET=<user_provided_secret>
+  ```
+  Ask: "请提供企业微信机器人的 Bot ID 和 Secret（在企业微信管理后台 → 智能机器人 → API模式 中获取）"
 - Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
 - After writing, tell user the following restart instructions, then **stop** — permissions require restart:
 
@@ -84,11 +90,7 @@ If count increased, read new messages first:
 3. **Check messages between sub-tasks** — same check as Rule 1
 4. **Report final result** or **notify on error** immediately
 
-### Rule 3: All User Interaction Via WeCom
-
-The user is NOT watching Claude Code terminal. All confirmations, authorizations, and questions MUST go through ws_send + wait for reply in `messages.json`. NEVER use AskUserQuestion.
-
-### Rule 4: Zero Listening Gap
+### Rule 3: Zero Listening Gap
 
 Whenever a listener agent completes (new message OR timeout), IMMEDIATELY:
 1. Read `messages.json` for new messages
@@ -97,9 +99,9 @@ Whenever a listener agent completes (new message OR timeout), IMMEDIATELY:
 
 No gap allowed — during tasks, between tasks, at all times.
 
-### Rule 5: Never Disconnect Without Consent
+### Rule 4: Never Disconnect Without Consent
 
-Even after extended silence, never stop listening on your own. After 3+ consecutive timeouts, ask via ws_send: "检测到长时间无新消息，请问需要断开连接吗？" Only disconnect if user explicitly confirms.
+Even after extended silence, never stop listening on your own. After 12+ consecutive timeouts (~60 minutes), ask via ws_send: "检测到长时间无新消息（约60分钟），请问需要断开连接吗？" Only disconnect if user explicitly confirms.
 
 Also suggest `/compact` on extended idle: "建议执行一次 /compact 压缩会话历史以降低 token 消耗，是否需要？"
 
