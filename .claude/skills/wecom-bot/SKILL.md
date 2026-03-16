@@ -156,7 +156,7 @@ There must NEVER be a period where no listener agent is running. This applies du
 - Reply msgtype must be `markdown` (text/stream returns errcode 40008)
 - Use `websocket-client` (sync), not `websockets` (async) — the latter has protocol compatibility issues
 - Bot auto-reconnects on disconnect with incremental delay (3s → 30s)
-- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 5 minutes
+- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 10 minutes
 - Outbox messages are retained during disconnection and auto-sent after reconnect (never lost)
 - Chinese content in terminal is garbled on Windows — always use Read tool on `messages.json`
 - Use the standalone `.claude/skills/wecom-bot/scripts/watch_messages.py` script, not inline Python in subagent commands

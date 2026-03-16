@@ -9,7 +9,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "..", ".."))
 target_file = os.path.join(BASE_DIR, "messages.json")
 known_count = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-timeout = int(sys.argv[2]) if len(sys.argv) > 2 else 300
+timeout = int(sys.argv[2]) if len(sys.argv) > 2 else 600
 
 start = time.time()
 while time.time() - start < timeout:
