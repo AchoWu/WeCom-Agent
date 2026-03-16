@@ -172,27 +172,27 @@ python .claude/skills/wecom-bot/scripts/wecom_tool.py ask "请确认是否继续
 
 ## 安全：权限沙箱
 
-与 Open Claw 等全权限方案不同，WeCom-Agent 通过 Claude Code 的 `settings.local.json` 将文件操作**严格限定在项目目录内**：
+与 Open Claw 等全权限方案不同，WeCom-Agent 通过 Claude Code 的 `settings.local.json` 将文件操作**严格限定在指定目录内**。首次启动时 Agent 会自动询问你要开放哪个工作目录，然后生成权限配置：
 
 ```jsonc
-// .claude/settings.local.json
+// .claude/settings.local.json（自动生成，使用绝对路径）
 {
   "permissions": {
     "allow": [
-      "Read(./workspace/**)",   // 只能读取 workspace 目录
-      "Edit(./workspace/**)",   // 只能编辑 workspace 目录
-      "Write(./workspace/**)",  // 只能写入 workspace 目录
-      "Bash(*)",                // Shell 命令（可按需收紧）
-      "Glob(*)",
-      "Grep(*)"
+      "Read(C:/Users/xxx/Desktop/Wecom-Agent/**)",   // 项目目录
+      "Edit(C:/Users/xxx/Desktop/Wecom-Agent/**)",
+      "Write(C:/Users/xxx/Desktop/Wecom-Agent/**)",
+      "Read(C:/Users/xxx/workspace/**)",              // 你指定的工作目录
+      "Edit(C:/Users/xxx/workspace/**)",
+      "Write(C:/Users/xxx/workspace/**)",
+      "Bash(*)", "Glob(*)", "Grep(*)",
+      "WebSearch", "WebFetch(*)", "Agent(*)"
     ]
   }
 }
 ```
 
-**用法：** 把需要 Agent 处理的文件放入项目下的指定工作目录（如 `workspace/`），然后在 `settings.local.json` 中将 `Read`/`Edit`/`Write` 权限锁定到该目录。Agent 只能在这个沙箱内操作，无法触碰系统其他文件。
-
-你可以根据实际需求调整目录路径和权限范围，做到**最小权限原则**——只给 Agent 它需要的，不多给一分。
+Agent 只能在项目目录和你指定的工作目录内操作，无法触碰系统其他文件。你可以根据实际需求调整目录路径，做到**最小权限原则**——只给 Agent 它需要的，不多给一分。
 
 ## 注意事项
 

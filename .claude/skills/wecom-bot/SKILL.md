@@ -14,25 +14,40 @@ Execute these steps in order to start the bot and begin the listen-reply loop.
 
 ### 0. Initialize Permissions (First Run Only)
 
-Before starting the bot for the first time, check if `.claude/settings.local.json` exists. If not, ask the user which directory they want the Agent to have file access to (e.g., `./workspace`), then create the config:
+Before starting the bot for the first time, check if `.claude/settings.local.json` exists. If not, ask the user which directory they want the Agent to have file access to (e.g., `./workspace`), then create the config.
+
+The permissions MUST include:
+1. **Full access to the project directory itself** (for messages.json, outbox.json, scripts, etc.)
+2. **Full access to the user-specified workspace directory** (for task file operations)
+3. **All tool permissions** (Bash, Glob, Grep, WebSearch, WebFetch, Agent)
+
+Use the **absolute path** of the project directory (obtained via `pwd`) to avoid relative path issues.
 
 ```jsonc
 // .claude/settings.local.json
 {
   "permissions": {
     "allow": [
-      "Read(./<user_specified_dir>/**)",
-      "Edit(./<user_specified_dir>/**)",
-      "Write(./<user_specified_dir>/**)",
+      "Read(<absolute_project_path>/**)",
+      "Edit(<absolute_project_path>/**)",
+      "Write(<absolute_project_path>/**)",
+      "Read(<user_specified_dir>/**)",
+      "Edit(<user_specified_dir>/**)",
+      "Write(<user_specified_dir>/**)",
       "Bash(*)",
       "Glob(*)",
-      "Grep(*)"
+      "Grep(*)",
+      "WebSearch",
+      "WebFetch(*)",
+      "Agent(*)"
     ]
   }
 }
 ```
 
-**You MUST ask the user** to specify the workspace directory path. Do not assume a default. Example prompt: "请问您希望 Agent 在哪个目录下操作文件？例如 `./workspace` 或其他路径。这将用于初始化权限沙箱，Agent 只能读写该目录内的文件。"
+**You MUST ask the user** to specify the workspace directory path. Do not assume a default. Example prompt: "请问您希望 Agent 在哪个目录下操作文件？例如 `C:/Users/xxx/workspace` 或其他路径。这将用于初始化权限沙箱，Agent 只能读写该目录和本项目目录内的文件。"
+
+**IMPORTANT:** Use absolute paths (e.g., `C:/Users/xxx/Desktop/Wecom-Agent/**`) instead of relative paths. Relative paths like `./workspace/**` may not resolve correctly and cause repeated permission prompts.
 
 ### 1. Start Bot Process (Background)
 
