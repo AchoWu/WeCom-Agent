@@ -51,7 +51,7 @@ WeCom API ←→ WebSocket ←→ wecom_bot.py (background daemon)
                             Claude Agent (wecom_tool.py / watch_messages.py)
 ```
 
-- **wecom_bot.py** — Background daemon maintaining WebSocket connection. Receives messages into `messages.json`, monitors `outbox.json` every 1s to send queued messages. Auto-reconnects with exponential backoff (3s→30s). Health checker forces reconnect after 10min silence.
+- **wecom_bot.py** — Background daemon maintaining WebSocket connection. Receives messages into `messages.json`, monitors `outbox.json` every 1s to send queued messages. Auto-reconnects with exponential backoff (3s→30s). Health checker forces reconnect after 5min silence.
 - **wecom_tool.py** — CLI utility for sending (webhook, reply URL, or WebSocket queue) and receiving messages.
 - **watch_messages.py** — Polls `messages.json` for new messages, exits on arrival or timeout.
 

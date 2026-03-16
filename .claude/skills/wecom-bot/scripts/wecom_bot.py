@@ -72,8 +72,8 @@ def health_checker():
     global _ws
     while True:
         time.sleep(30)
-        if _ws is not None and time.time() - _last_msg_time > 600:
-            print("HEALTH: no message in 10min, forcing reconnect...", flush=True)
+        if _ws is not None and time.time() - _last_msg_time > 300:
+            print("HEALTH: no message in 5min, forcing reconnect...", flush=True)
             try:
                 _ws.close()
             except Exception:

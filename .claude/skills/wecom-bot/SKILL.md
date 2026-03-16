@@ -70,13 +70,13 @@ Store this number as `<COUNT>` for the listener.
 Spawn a background Agent with `run_in_background=true`:
 
 ```
-prompt: "Run this command in foreground and wait for it to complete (timeout up to 610 seconds).
+prompt: "Run this command in foreground and wait for it to complete (timeout up to 310 seconds).
 Do NOT use any other tools, just run this one Bash command and return the output:
-python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 600
+python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 300
 Working directory: C:\Users\29441\Desktop\Claude-Agent"
 ```
 
-The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 600 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
+The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 300 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
 
 ### 4. Process Incoming Messages
 
@@ -165,7 +165,7 @@ There must NEVER be a period where no listener agent is running. This applies du
 - Reply msgtype must be `markdown` (text/stream returns errcode 40008)
 - Use `websocket-client` (sync), not `websockets` (async) — the latter has protocol compatibility issues
 - Bot auto-reconnects on disconnect with incremental delay (3s → 30s)
-- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 10 minutes
+- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 5 minutes
 - Outbox messages are retained during disconnection and auto-sent after reconnect (never lost)
 - Chinese content in terminal is garbled on Windows — always use Read tool on `messages.json`
 - Use the standalone `.claude/skills/wecom-bot/scripts/watch_messages.py` script, not inline Python in subagent commands
