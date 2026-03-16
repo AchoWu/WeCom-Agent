@@ -4,7 +4,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-cc785c?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> 工作从未如此简单，为你的 Claude Code 增加一个 skill！不在电脑前也能工作，让 Claude Code 接入企业微信，通过智能机器人实现双向实时对话。
+> 不在电脑前也能工作！为你的 Claude Code 增加一个 skill，通过企业微信智能机器人实现双向实时对话。
 
 将 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Anthropic 的 AI 编程助手 CLI) 与企业微信智能机器人打通，用户在企业微信中发消息，Claude Agent 实时接收、处理并回复——把 AI 编程能力直接搬到你的工作群和私聊里。
 

@@ -6,172 +6,103 @@ version: 1.0.0
 
 # WeCom Bot - Enterprise WeChat Bidirectional Communication
 
-Enable bidirectional messaging with users through an Enterprise WeChat (WeCom) intelligent bot via WebSocket.
+## Step 0. Initialize Permissions (First Run Only)
 
-## Quick Start
-
-Execute these steps in order to start the bot and begin the listen-reply loop.
-
-### 0. Initialize Permissions (First Run Only)
-
-Before starting the bot for the first time, check if `.claude/settings.local.json` exists. If not, ask the user which directory they want the Agent to have file access to (e.g., `./workspace`), then create the config.
-
-The permissions MUST include:
-1. **Full access to the project directory itself** (for messages.json, outbox.json, scripts, etc.)
-2. **Full access to the user-specified workspace directory** (for task file operations)
-3. **All tool permissions** (Bash, Glob, Grep, WebSearch, WebFetch, Agent)
-
-Use the **absolute path** of the project directory (obtained via `pwd`) to avoid relative path issues.
+If `.claude/settings.local.json` does not exist, ask the user for their workspace directory path, then create it:
 
 ```jsonc
-// .claude/settings.local.json
 {
   "permissions": {
     "allow": [
-      "Read(<absolute_project_path>/**)",
-      "Edit(<absolute_project_path>/**)",
-      "Write(<absolute_project_path>/**)",
-      "Read(<user_specified_dir>/**)",
-      "Edit(<user_specified_dir>/**)",
-      "Write(<user_specified_dir>/**)",
-      "Bash(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "WebSearch",
-      "WebFetch(*)",
-      "Agent(*)"
+      "Read(<absolute_project_path>/**)", "Edit(<absolute_project_path>/**)", "Write(<absolute_project_path>/**)",
+      "Read(<user_specified_dir>/**)", "Edit(<user_specified_dir>/**)", "Write(<user_specified_dir>/**)",
+      "Bash(*)", "Glob(*)", "Grep(*)", "WebSearch", "WebFetch(*)", "Agent(*)"
     ]
   }
 }
 ```
 
-**You MUST ask the user** to specify the workspace directory path. Do not assume a default. Example prompt: "请问您希望 Agent 在哪个目录下操作文件？例如 `C:/Users/xxx/workspace` 或其他路径。这将用于初始化权限沙箱，Agent 只能读写该目录和本项目目录内的文件。"
+- Ask user: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
+- Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
+- After writing, tell user: "权限配置已写入，请重启 Claude Code 后再说「开始监听企业微信」即可生效。" Then **stop** — permissions require restart.
 
-**IMPORTANT:** Use absolute paths (e.g., `C:/Users/xxx/Desktop/Wecom-Agent/**`) instead of relative paths. Relative paths like `./workspace/**` may not resolve correctly and cause repeated permission prompts. All paths MUST end with `/**` to recursively match all files and subdirectories — without `/**`, only the directory itself is matched and accessing any file inside it will still trigger permission prompts.
-
-### 1. Start Bot Process (Background)
+## Step 1. Start Bot & Listen Loop
 
 ```bash
+# Start bot daemon
 python .claude/skills/wecom-bot/scripts/wecom_bot.py &disown 2>/dev/null &
-```
 
-This starts a WebSocket long connection to `wss://openws.work.weixin.qq.com`. Incoming messages are saved to `messages.json`. Outgoing messages are read from `outbox.json` and sent via WebSocket.
-
-### 2. Get Current Message Count
-
-```bash
+# Get current message count (store as <COUNT>)
 python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
 ```
 
-Store this number as `<COUNT>` for the listener.
-
-### 3. Launch Background Listener Agent
-
-Spawn a background Agent with `run_in_background=true`:
-
+Launch background listener Agent (`run_in_background=true`):
 ```
 prompt: "Run this command in foreground and wait for it to complete (timeout up to 310 seconds).
 Do NOT use any other tools, just run this one Bash command and return the output:
 python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 300
-Working directory: C:\Users\29441\Desktop\Claude-Agent"
+Working directory: <absolute_project_path>"
 ```
 
-The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 300 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
+## Step 2. Process & Reply
 
-### 4. Process Incoming Messages
+When listener completes: Read `messages.json` with **Read tool** (NOT terminal — Windows garbles Chinese), extract user's request.
 
-When the listener agent completes (automatic notification):
-
-1. Read the end of `messages.json` with the **Read tool** using a large offset (do NOT rely on terminal output — Windows terminal garbles Chinese)
-2. Find the latest message(s) and extract the `content` field for the user's request
-
-### 5. Reply to User
-
-**Primary method — ws_send** (writes to outbox.json, bot sends via WebSocket):
-
+**Reply via ws_send:**
 ```bash
-python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "Reply content here"
+python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "message"
 ```
 
-**CRITICAL: CHECK BEFORE EVERY SEND.** Before sending any reply (including progress updates and final results), always check `messages.json` count first to see if the user has sent new messages (e.g., "取消", a new request, or changed requirements). If the user has already cancelled or sent a new request, do NOT send the stale reply — handle the new message instead. This prevents the awkward situation where the agent replies to an already-cancelled request.
+## Core Rules
 
-### 6. Task Execution Flow
+### Rule 1: Check Messages Before Every Send
 
-**CRITICAL: The user is interacting via WeCom, NOT via the Claude Code terminal.** Whenever you need user confirmation, authorization, or input (e.g., "是否继续？", "确认删除？", choosing between options), you MUST send the question via ws_send to WeCom and wait for the user's reply in `messages.json`. NEVER use AskUserQuestion or expect the user to respond in the Claude Code terminal — they are not watching it.
-
-**CRITICAL: Always follow this pattern for every task.**
-
-**Step A — Acknowledge immediately.** As soon as you receive a task, reply "收到，正在处理..." via ws_send BEFORE doing any work. Never let the user send a message and get silence in return.
-
-**Step B — Break into sub-tasks and report progress.** Decompose the task into logical steps. After completing each sub-task, send a brief progress update to the user (e.g., "第1步已完成，正在处理第2步..."). For multi-step tasks, never let the user wait more than 1 minute without feedback.
-
-**Step C — Check for new messages between sub-tasks.** After each sub-task completes, check `messages.json` count to see if the user sent new messages while you were working:
+Before sending ANY ws_send (ack, progress, result — no exceptions), check for new messages first:
 ```bash
 python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
 ```
-If new messages arrived:
-- If the user sent "取消" / "停止" / "cancel" → stop the current task and acknowledge
-- If the user sent a new question or changed requirements → adjust accordingly
-- Otherwise → continue with the next sub-task
+If count increased, read new messages first:
+- User changed intent / new request → reply "收到", switch to new task
+- User sent "取消" / "停止" / "cancel" → acknowledge, stop current task
+- Follow-up info → incorporate and continue
 
-**Step D — Report final result.** When all sub-tasks are done, send the complete result to the user.
+### Rule 2: Task Execution Pattern
 
-**Step E — On error.** Immediately notify the user with error details and suggested next steps. Do not silently fail.
+1. **Acknowledge immediately** — reply "收到，正在处理..." BEFORE any work
+2. **Break into sub-tasks, report progress** — send updates at each milestone, never let user wait >1 min
+3. **Check messages between sub-tasks** — same check as Rule 1
+4. **Report final result** or **notify on error** immediately
 
-### 7. Loop with Concurrent Listening
+### Rule 3: All User Interaction Via WeCom
 
-**CRITICAL RULE: ZERO LISTENING GAP.** Whenever a background listener agent completes (whether it detected a new message or timed out), you MUST immediately:
-1. Read `messages.json` to check for new messages
-2. Get the current message count
-3. Launch a new background listener agent
+The user is NOT watching Claude Code terminal. All confirmations, authorizations, and questions MUST go through ws_send + wait for reply in `messages.json`. NEVER use AskUserQuestion.
 
-There must NEVER be a period where no listener agent is running. This applies during task execution, between tasks, and at all other times. Failing to restart the listener immediately causes missed messages.
+### Rule 4: Zero Listening Gap
 
-**CRITICAL RULE: NEVER DISCONNECT WITHOUT USER CONSENT.** Even if the user has not sent any messages for a long time, you must NOT stop listening or disconnect on your own. If you notice extended silence (e.g., multiple consecutive timeouts), send a friendly message via ws_send asking the user if they want to disconnect, for example: "您好，检测到已经较长时间没有新消息了，请问需要断开连接吗？" Only if the user explicitly confirms (e.g., "好的", "断开", "是", "停止") should you stop listening and end the session. If the user does not respond or says no, continue the listen loop as normal.
+Whenever a listener agent completes (new message OR timeout), IMMEDIATELY:
+1. Read `messages.json` for new messages
+2. Get current count
+3. Launch a new background listener
 
-**COMPACT SUGGESTION ON EXTENDED IDLE.** When multiple consecutive timeouts occur without any user message (e.g., 3+ timeouts in a row), proactively suggest to the user via ws_send: "检测到长时间无新消息，建议执行一次 /compact 压缩会话历史以降低 token 消耗，是否需要？" If the user confirms, run `/compact` to compress the repetitive timeout loops, then continue listening as normal. This helps keep the session efficient during long idle periods.
+No gap allowed — during tasks, between tasks, at all times.
 
-**During task execution:**
+### Rule 5: Never Disconnect Without Consent
 
-1. **Launch a background listener agent** (same as Step 3) alongside the task work
-2. **When the listener completes** (automatic notification), immediately read messages, process them, get new count, and launch a new listener — even if you are in the middle of task work
-3. **Between sub-tasks**, also check `messages.json` count as described in Step 6C as a safety net
-4. **If new messages are detected**, read `messages.json` to check content:
-   - If the user sent "取消" / "停止" / "cancel" → stop the current task and acknowledge
-   - If the user sent a new question → finish or pause current task, then handle the new request
-   - Otherwise → continue the current task
-5. **After task completion**, get the new message count, check for any missed messages, then launch a new listener agent. Repeat.
+Even after extended silence, never stop listening on your own. After 3+ consecutive timeouts, ask via ws_send: "检测到长时间无新消息，请问需要断开连接吗？" Only disconnect if user explicitly confirms.
 
-## Reply Channels
+Also suggest `/compact` on extended idle: "建议执行一次 /compact 压缩会话历史以降低 token 消耗，是否需要？"
 
-| Priority | Method | Command | Notes |
-|----------|--------|---------|-------|
-| 1 | WebSocket ws_send | `python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "msg"` | Recommended. Via outbox queue |
-| 2 | response_url | `python .claude/skills/wecom-bot/scripts/wecom_tool.py reply "msg"` | One-time use, expires quickly |
-| 3 | Webhook (group) | `python .claude/skills/wecom-bot/scripts/wecom_tool.py send "msg"` | Group only, no expiry |
+## Reference
 
-## Key Files
+| Priority | Reply Method | Command |
+|----------|-------------|---------|
+| 1 | ws_send (recommended) | `wecom_tool.py ws_send "msg"` |
+| 2 | response_url | `wecom_tool.py reply "msg"` |
+| 3 | Webhook (group only) | `wecom_tool.py send "msg"` |
 
-| File | Role |
-|------|------|
-| `.claude/skills/wecom-bot/scripts/wecom_bot.py` | WebSocket bot process (websocket-client lib) |
-| `.claude/skills/wecom-bot/scripts/wecom_tool.py` | CLI tool: send / send_md / reply / ws_send / receive / ask |
-| `.claude/skills/wecom-bot/scripts/watch_messages.py` | New-message watcher (for subagent polling) |
-| `messages.json` | Received message store (includes req_id for ws reply) |
-| `outbox.json` | Outbound message queue (bot checks every 1s) |
-
-## Technical Notes
-
-- Reply msgtype must be `markdown` (text/stream returns errcode 40008)
-- Use `websocket-client` (sync), not `websockets` (async) — the latter has protocol compatibility issues
-- Bot auto-reconnects on disconnect with incremental delay (3s → 30s)
-- Bot includes a health checker thread: checks every 30s, forces reconnect if no message in 5 minutes
-- Outbox messages are retained during disconnection and auto-sent after reconnect (never lost)
-- Chinese content in terminal is garbled on Windows — always use Read tool on `messages.json`
-- Use the standalone `.claude/skills/wecom-bot/scripts/watch_messages.py` script, not inline Python in subagent commands
-- **Long messages will silently fail to send.** Keep each message under ~500 characters. For longer content, split into multiple messages with `sleep 2` between sends to avoid ordering issues
-
-## Additional Resources
-
-- **`references/message-format.md`** — Detailed message JSON structure, field descriptions, and reply method details
-- **`scripts/start.sh`** — Quick-start script to launch bot and verify connection
+**Technical notes:**
+- Reply msgtype must be `markdown` (text/stream → errcode 40008)
+- Keep messages under ~500 chars, split longer content with `sleep 2` between sends
+- Bot auto-reconnects with backoff (3s→30s), health check forces reconnect after 5min silence
+- Outbox messages survive disconnection, auto-sent on reconnect
+- Use `websocket-client` (sync), not `websockets` (async)
