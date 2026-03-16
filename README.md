@@ -70,13 +70,26 @@
 
 </details>
 
-### 1. 安装依赖
+### 一句话安装
+
+把下面这句话发给 Claude Code，它会自动完成安装和配置：
+
+```
+请阅读 github.com/AchoWu/WeCom-Agent 并按照说明安装和配置 WeCom-Agent 以用于 Claude Code。
+```
+
+### 手动安装
+
+<details>
+<summary>如果你更喜欢自己动手</summary>
+
+#### 1. 安装依赖
 
 ```bash
 pip install websocket-client requests
 ```
 
-### 2. 配置机器人凭据
+#### 2. 配置机器人凭据
 
 ```bash
 cp .env.example .env
@@ -90,7 +103,9 @@ WECOM_BOT_SECRET=your_bot_secret_here
 # WECOM_WEBHOOK_URL=  # 可选，仅 Webhook 群聊发送需要，核心功能不依赖
 ```
 
-### 3. 启动
+</details>
+
+### 启动
 
 **方式一：Claude Code Skill（推荐）**
 

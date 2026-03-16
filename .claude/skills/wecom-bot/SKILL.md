@@ -12,6 +12,28 @@ Enable bidirectional messaging with users through an Enterprise WeChat (WeCom) i
 
 Execute these steps in order to start the bot and begin the listen-reply loop.
 
+### 0. Initialize Permissions (First Run Only)
+
+Before starting the bot for the first time, check if `.claude/settings.local.json` exists. If not, ask the user which directory they want the Agent to have file access to (e.g., `./workspace`), then create the config:
+
+```jsonc
+// .claude/settings.local.json
+{
+  "permissions": {
+    "allow": [
+      "Read(./<user_specified_dir>/**)",
+      "Edit(./<user_specified_dir>/**)",
+      "Write(./<user_specified_dir>/**)",
+      "Bash(*)",
+      "Glob(*)",
+      "Grep(*)"
+    ]
+  }
+}
+```
+
+**You MUST ask the user** to specify the workspace directory path. Do not assume a default. Example prompt: "请问您希望 Agent 在哪个目录下操作文件？例如 `./workspace` 或其他路径。这将用于初始化权限沙箱，Agent 只能读写该目录内的文件。"
+
 ### 1. Start Bot Process (Background)
 
 ```bash
