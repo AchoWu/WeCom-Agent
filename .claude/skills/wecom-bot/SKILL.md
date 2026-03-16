@@ -55,9 +55,15 @@ python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "message"
 
 ## Core Rules
 
-### Rule 1: Check Messages Before Every Send
+### Rule 1: Check Messages at Key Points
 
-Before sending ANY ws_send (ack, progress, result — no exceptions), check for new messages first:
+Check `messages.json` count for new messages at these moments:
+- **Before starting a new task** (after receiving the request)
+- **Between sub-tasks** (not between split parts of the same message)
+- **Before sending the final result**
+
+Do NOT check before every single ws_send — when a long reply is split into multiple messages, just send them consecutively without checking in between.
+
 ```bash
 python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
 ```
@@ -69,7 +75,7 @@ If count increased, read new messages first:
 ### Rule 2: Task Execution Pattern
 
 1. **Acknowledge immediately** — reply "收到，正在处理..." BEFORE any work
-2. **Break into sub-tasks, report progress** — send updates at each milestone, never let user wait >1 min
+2. **Break into sub-tasks, report progress** — send updates at each milestone. For long-running tasks, send a progress update every 3-5 minutes so the user knows work is still ongoing (e.g., "仍在处理中，当前进度：已完成XX，正在进行YY...")
 3. **Check messages between sub-tasks** — same check as Rule 1
 4. **Report final result** or **notify on error** immediately
 
