@@ -15,6 +15,7 @@ import os
 import sys
 import time
 import uuid
+import subprocess
 import threading
 from datetime import datetime
 
@@ -65,6 +66,45 @@ if not BOT_ID or not SECRET:
 _ws = None
 _last_msg_time = time.time()
 _subscribed = False  # subscribe 确认后才允许发消息
+
+
+def _kill_existing_bot():
+    """Kill any existing wecom_bot.py process (except self) to prevent duplicates."""
+    my_pid = os.getpid()
+    try:
+        if sys.platform == "win32":
+            # Windows: use tasklist + taskkill
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=5
+            )
+            # Also check via wmic for command line matching
+            result = subprocess.run(
+                ['wmic', 'process', 'where', "commandline like '%wecom_bot.py%'", 'get', 'processid'],
+                capture_output=True, text=True, timeout=5
+            )
+            for line in result.stdout.strip().split('\n'):
+                line = line.strip()
+                if line.isdigit():
+                    pid = int(line)
+                    if pid != my_pid:
+                        print(f"Killing old bot process (PID {pid})...", flush=True)
+                        subprocess.run(["taskkill", "/F", "/PID", str(pid)], timeout=5)
+        else:
+            # Unix/Mac: use pgrep
+            result = subprocess.run(
+                ["pgrep", "-f", "wecom_bot.py"],
+                capture_output=True, text=True, timeout=5
+            )
+            for line in result.stdout.strip().split('\n'):
+                line = line.strip()
+                if line.isdigit():
+                    pid = int(line)
+                    if pid != my_pid:
+                        print(f"Killing old bot process (PID {pid})...", flush=True)
+                        os.kill(pid, 15)  # SIGTERM
+    except Exception as e:
+        print(f"Process check warning: {e}", flush=True)
 
 
 def health_checker():
@@ -267,6 +307,8 @@ def on_open(ws):
 
 def run_bot():
     global retry_delay
+    _kill_existing_bot()
+
     print("=" * 50)
     print(" WeCom Bot (WebSocket)")
     print("=" * 50)
