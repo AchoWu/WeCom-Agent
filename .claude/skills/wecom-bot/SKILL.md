@@ -93,18 +93,26 @@ When the listener agent completes (automatic notification):
 python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "Reply content here"
 ```
 
-For task requests: first reply "收到" (acknowledged), then execute the task, then send results back.
+### 6. Task Execution Flow
 
-### 6. Progress Reporting
+**CRITICAL: Always follow this pattern for every task.**
 
-**IMPORTANT**: To avoid leaving users waiting without feedback, proactively report progress during task execution:
+**Step A — Acknowledge immediately.** As soon as you receive a task, reply "收到，正在处理..." via ws_send BEFORE doing any work. Never let the user send a message and get silence in return.
 
-- **Before starting**: Reply "收到，正在处理..." (acknowledged, working on it)
-- **During execution**: Send progress updates at key milestones (e.g., "正在搜索相关信息...", "已完成第1步，正在处理第2步...")
-- **On completion**: Send the final result
-- **On error**: Immediately notify the user with the error details and next steps
+**Step B — Break into sub-tasks and report progress.** Decompose the task into logical steps. After completing each sub-task, send a brief progress update to the user (e.g., "第1步已完成，正在处理第2步..."). For multi-step tasks, never let the user wait more than 1 minute without feedback.
 
-For multi-step tasks, send at least one progress update every 30-60 seconds so the user knows the task is still being worked on. Never let the user wait more than 1 minute without any feedback.
+**Step C — Check for new messages between sub-tasks.** After each sub-task completes, check `messages.json` count to see if the user sent new messages while you were working:
+```bash
+python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
+```
+If new messages arrived:
+- If the user sent "取消" / "停止" / "cancel" → stop the current task and acknowledge
+- If the user sent a new question or changed requirements → adjust accordingly
+- Otherwise → continue with the next sub-task
+
+**Step D — Report final result.** When all sub-tasks are done, send the complete result to the user.
+
+**Step E — On error.** Immediately notify the user with error details and suggested next steps. Do not silently fail.
 
 ### 7. Loop with Concurrent Listening
 
@@ -123,10 +131,7 @@ There must NEVER be a period where no listener agent is running. This applies du
 
 1. **Launch a background listener agent** (same as Step 3) alongside the task work
 2. **When the listener completes** (automatic notification), immediately read messages, process them, get new count, and launch a new listener — even if you are in the middle of task work
-3. **At each key step** of the task, also quickly check `messages.json` count as a safety net:
-   ```bash
-   python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
-   ```
+3. **Between sub-tasks**, also check `messages.json` count as described in Step 6C as a safety net
 4. **If new messages are detected**, read `messages.json` to check content:
    - If the user sent "取消" / "停止" / "cancel" → stop the current task and acknowledge
    - If the user sent a new question → finish or pause current task, then handle the new request
