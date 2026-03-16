@@ -47,7 +47,7 @@ Use the **absolute path** of the project directory (obtained via `pwd`) to avoid
 
 **You MUST ask the user** to specify the workspace directory path. Do not assume a default. Example prompt: "请问您希望 Agent 在哪个目录下操作文件？例如 `C:/Users/xxx/workspace` 或其他路径。这将用于初始化权限沙箱，Agent 只能读写该目录和本项目目录内的文件。"
 
-**IMPORTANT:** Use absolute paths (e.g., `C:/Users/xxx/Desktop/Wecom-Agent/**`) instead of relative paths. Relative paths like `./workspace/**` may not resolve correctly and cause repeated permission prompts.
+**IMPORTANT:** Use absolute paths (e.g., `C:/Users/xxx/Desktop/Wecom-Agent/**`) instead of relative paths. Relative paths like `./workspace/**` may not resolve correctly and cause repeated permission prompts. All paths MUST end with `/**` to recursively match all files and subdirectories — without `/**`, only the directory itself is matched and accessing any file inside it will still trigger permission prompts.
 
 ### 1. Start Bot Process (Background)
 
