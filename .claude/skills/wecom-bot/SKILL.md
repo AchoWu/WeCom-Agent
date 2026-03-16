@@ -6,9 +6,16 @@ version: 1.0.0
 
 # WeCom Bot - Enterprise WeChat Bidirectional Communication
 
-## Step 0. Initialize Permissions (First Run Only)
+## Step 0. Initialize (First Run Only)
 
-If `.claude/settings.local.json` does not exist, ask the user for their workspace directory path, then create it:
+**0a. Configure credentials** — Check if `.env` exists. If not, ask user for Bot ID and Secret, then create `.env`:
+```
+WECOM_BOT_ID=<user_provided_bot_id>
+WECOM_BOT_SECRET=<user_provided_secret>
+```
+Ask: "请提供企业微信机器人的 Bot ID 和 Secret（在企业微信管理后台 → 智能机器人 → API模式 中获取）"
+
+**0b. Configure permissions** — If `.claude/settings.local.json` does not exist, ask user for workspace directory, then create it:
 
 ```jsonc
 {
@@ -22,13 +29,7 @@ If `.claude/settings.local.json` does not exist, ask the user for their workspac
 }
 ```
 
-- Ask user for workspace directory: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
-- Check if `.env` exists. If not, ask user for Bot ID and Secret, then create `.env`:
-  ```
-  WECOM_BOT_ID=<user_provided_bot_id>
-  WECOM_BOT_SECRET=<user_provided_secret>
-  ```
-  Ask: "请提供企业微信机器人的 Bot ID 和 Secret（在企业微信管理后台 → 智能机器人 → API模式 中获取）"
+- Ask: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
 - Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
 - After writing, tell user the following restart instructions, then **stop** — permissions require restart:
 
@@ -43,8 +44,8 @@ If `.claude/settings.local.json` does not exist, ask the user for their workspac
 # Start bot daemon
 python .claude/skills/wecom-bot/scripts/wecom_bot.py &disown 2>/dev/null &
 
-# Get current message count (store as <COUNT>)
-python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
+# Get current message count (store as <COUNT>, 0 if file doesn't exist)
+python -c "import json,os; print(len(json.load(open('messages.json','r',encoding='utf-8'))) if os.path.exists('messages.json') else 0)"
 ```
 
 Launch background listener Agent (`run_in_background=true`):
@@ -76,7 +77,7 @@ Check `messages.json` count for new messages at these moments:
 Do NOT check before every single ws_send — when a long reply is split into multiple messages, just send them consecutively without checking in between.
 
 ```bash
-python -c "import json; f=open('messages.json','r',encoding='utf-8'); print(len(json.load(f)))"
+python -c "import json,os; print(len(json.load(open('messages.json','r',encoding='utf-8'))) if os.path.exists('messages.json') else 0)"
 ```
 If count increased, read new messages first:
 - User changed intent / new request → reply "收到", switch to new task
