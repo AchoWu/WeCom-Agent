@@ -55,13 +55,13 @@ Store this number as `<COUNT>` for the listener.
 Spawn a background Agent with `run_in_background=true`:
 
 ```
-prompt: "Run this command in foreground and wait for it to complete (timeout up to 310 seconds).
+prompt: "Run this command in foreground and wait for it to complete (timeout up to 610 seconds).
 Do NOT use any other tools, just run this one Bash command and return the output:
-python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 300
+python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 600
 Working directory: C:\Users\29441\Desktop\Claude-Agent"
 ```
 
-The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 300 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
+The watcher script checks `messages.json` every 1 second. It exits immediately when new messages appear, or prints "TIMEOUT" after 600 seconds. The subagent uses only 1 tool call for the entire wait — zero API consumption while idle.
 
 ### 4. Process Incoming Messages
 
@@ -101,6 +101,8 @@ For multi-step tasks, send at least one progress update every 30-60 seconds so t
 There must NEVER be a period where no listener agent is running. This applies during task execution, between tasks, and at all other times. Failing to restart the listener immediately causes missed messages.
 
 **CRITICAL RULE: NEVER DISCONNECT WITHOUT USER CONSENT.** Even if the user has not sent any messages for a long time, you must NOT stop listening or disconnect on your own. If you notice extended silence (e.g., multiple consecutive timeouts), send a friendly message via ws_send asking the user if they want to disconnect, for example: "您好，检测到已经较长时间没有新消息了，请问需要断开连接吗？" Only if the user explicitly confirms (e.g., "好的", "断开", "是", "停止") should you stop listening and end the session. If the user does not respond or says no, continue the listen loop as normal.
+
+**COMPACT SUGGESTION ON EXTENDED IDLE.** When multiple consecutive timeouts occur without any user message (e.g., 3+ timeouts in a row), proactively suggest to the user via ws_send: "检测到长时间无新消息，建议执行一次 /compact 压缩会话历史以降低 token 消耗，是否需要？" If the user confirms, run `/compact` to compress the repetitive timeout loops, then continue listening as normal. This helps keep the session efficient during long idle periods.
 
 **During task execution:**
 
