@@ -8,12 +8,14 @@ version: 1.0.0
 
 ## Step 0. Initialize (First Run Only)
 
-**0a. Configure credentials** — Check if `.env` exists. If not, ask user for Bot ID and Secret, then create `.env`:
-```
-WECOM_BOT_ID=<user_provided_bot_id>
-WECOM_BOT_SECRET=<user_provided_secret>
-```
-Ask: "请提供企业微信机器人的 Bot ID 和 Secret（在企业微信管理后台 → 智能机器人 → API模式 中获取）"
+**0a. Configure credentials** — Check if `.env` exists. If not, tell user to create it and fill in credentials:
+
+  "检测到 `.env` 文件不存在。请先配置机器人凭据：
+  1. 复制 `.env.example` 为 `.env`
+  2. 填入 Bot ID 和 Secret（在企业微信管理后台 → 智能机器人 → API模式 中获取）
+  3. 配置完成后告诉我"
+
+  Then **stop** and wait for user to confirm.
 
 **0b. Configure permissions** — If `.claude/settings.local.json` does not exist, ask user for workspace directory, then create it:
 
