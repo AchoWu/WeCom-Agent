@@ -31,6 +31,28 @@ import uuid
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Data files live in project root (4 levels up: scripts/ → wecom-bot/ → skills/ → .claude/ → project root)
 BASE_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "..", ".."))
+
+
+def _load_env():
+    """Load .env file from project root if it exists."""
+    env_path = os.path.join(BASE_DIR, ".env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                key, value = key.strip(), value.strip()
+                if value and value[0] in ('"', "'") and value[-1] == value[0]:
+                    value = value[1:-1]
+                os.environ.setdefault(key, value)
+
+
+_load_env()
+
 WEBHOOK_URL = os.environ.get("WECOM_WEBHOOK_URL", "")
 MESSAGES_FILE = os.path.join(BASE_DIR, "messages.json")
 OUTBOX_FILE = os.path.join(BASE_DIR, "outbox.json")
