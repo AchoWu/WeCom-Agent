@@ -24,7 +24,12 @@ If `.claude/settings.local.json` does not exist, ask the user for their workspac
 
 - Ask user: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
 - Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
-- After writing, tell user: "权限配置已写入，请重启 Claude Code 后再说「开始监听企业微信」即可生效。" Then **stop** — permissions require restart.
+- After writing, tell user the following restart instructions, then **stop** — permissions require restart:
+
+  "权限配置已写入，需要重启 Claude Code 才能生效：
+  1. 输入 `/exit` 或按 `Ctrl+C` 退出当前会话
+  2. 重新运行 `claude` 命令进入项目
+  3. 说「开始监听企业微信」即可"
 
 ## Step 1. Start Bot & Listen Loop
 
