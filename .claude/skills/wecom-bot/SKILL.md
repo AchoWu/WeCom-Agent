@@ -93,6 +93,8 @@ When the listener agent completes (automatic notification):
 python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "Reply content here"
 ```
 
+**CRITICAL: CHECK BEFORE EVERY SEND.** Before sending any reply (including progress updates and final results), always check `messages.json` count first to see if the user has sent new messages (e.g., "取消", a new request, or changed requirements). If the user has already cancelled or sent a new request, do NOT send the stale reply — handle the new message instead. This prevents the awkward situation where the agent replies to an already-cancelled request.
+
 ### 6. Task Execution Flow
 
 **CRITICAL: The user is interacting via WeCom, NOT via the Claude Code terminal.** Whenever you need user confirmation, authorization, or input (e.g., "是否继续？", "确认删除？", choosing between options), you MUST send the question via ws_send to WeCom and wait for the user's reply in `messages.json`. NEVER use AskUserQuestion or expect the user to respond in the Claude Code terminal — they are not watching it.
