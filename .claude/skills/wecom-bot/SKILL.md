@@ -95,6 +95,8 @@ python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "Reply content her
 
 ### 6. Task Execution Flow
 
+**CRITICAL: The user is interacting via WeCom, NOT via the Claude Code terminal.** Whenever you need user confirmation, authorization, or input (e.g., "是否继续？", "确认删除？", choosing between options), you MUST send the question via ws_send to WeCom and wait for the user's reply in `messages.json`. NEVER use AskUserQuestion or expect the user to respond in the Claude Code terminal — they are not watching it.
+
 **CRITICAL: Always follow this pattern for every task.**
 
 **Step A — Acknowledge immediately.** As soon as you receive a task, reply "收到，正在处理..." via ws_send BEFORE doing any work. Never let the user send a message and get silence in return.
