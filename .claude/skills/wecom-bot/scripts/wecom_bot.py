@@ -7,7 +7,7 @@
 2. 监听 outbox.json → 通过 WebSocket 发送消息（支持回复和主动发送）
 
 启动方式：
-    python wecom_bot.py
+    python .claude/skills/wecom-bot/scripts/wecom_bot.py
 """
 
 import json
@@ -258,7 +258,7 @@ def on_message(ws, message):
         errcode = data.get("errcode", body.get("errcode", -1))
         errmsg = data.get("errmsg", body.get("errmsg", ""))
         if errcode == 0:
-            global _subscribed
+            global _subscribed, retry_delay
             _subscribed = True
             retry_delay = 3  # 连接成功，重置重连延迟
             print("Subscribe OK!", flush=True)

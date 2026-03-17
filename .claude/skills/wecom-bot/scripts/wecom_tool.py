@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 """
 WeCom Tool for Claude Agent
-通过企业微信群机器人 Webhook 发送消息，通过 WebSocket 长连接接收消息。
+企业微信消息收发工具，支持多种发送方式：WebSocket 队列（ws_send）、response_url 回复（reply）、Webhook 群聊（send）。
 
 使用方式：
+    # 通过 WebSocket 发送消息（推荐）
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py ws_send "你好"
+
     # 发送消息（通过 Webhook 到群聊）
-    python wecom_tool.py send "你好"
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py send "你好"
 
     # 回复机器人单聊里的最新消息（通过 response_url）
-    python wecom_tool.py reply "回复内容"
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py reply "回复内容"
 
     # 读取最新收到的消息
-    python wecom_tool.py receive [N]
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py receive [N]
 
     # 发送消息并等待回复
-    python wecom_tool.py ask "请回复确认" [超时秒数]
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py ask "请回复确认" [超时秒数]
 
     # 连接测试
-    python wecom_tool.py test
+    python .claude/skills/wecom-bot/scripts/wecom_tool.py test
 """
 
 import requests
@@ -288,13 +291,15 @@ def receive_messages(count=5):
 
 
 def ask_and_wait(question: str, timeout=120):
-    """通过机器人回复发送问题，等待用户回复"""
-    # 先回复到机器人单聊
-    if not reply_to_bot(question):
-        # 如果回复失败，用 webhook 发到群聊
-        print("reply_to_bot failed, falling back to webhook")
-        if not send_text(f"[Claude Agent] {question}"):
-            return None
+    """通过机器人发送问题，等待用户回复（优先 ws_send）"""
+    # 优先通过 ws_send 发送
+    if not ws_send(question):
+        # ws_send 失败，尝试 response_url
+        if not reply_to_bot(question):
+            # 都失败，用 webhook 发到群聊
+            print("ws_send and reply_to_bot failed, falling back to webhook")
+            if not send_text(f"[Claude Agent] {question}"):
+                return None
 
     # 记录当前消息数
     msg_count_before = 0

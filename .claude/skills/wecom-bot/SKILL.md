@@ -6,7 +6,9 @@ version: 1.0.0
 
 # WeCom Bot - Enterprise WeChat Bidirectional Communication
 
-## Step 0. Initialize (First Run Only)
+## Step 0. Initialize (Once Per Session)
+
+Run this step once at the beginning of each new session, then skip on subsequent triggers within the same session.
 
 **0a. Configure credentials** — Check if `.env` exists. If not, tell user:
 
@@ -17,7 +19,7 @@ version: 1.0.0
 
   If user provides Bot ID and Secret, create `.env` with those values. Then continue.
 
-**0b. Configure permissions** — Always ask user for workspace directory and show the permissions config for confirmation:
+**0b. Configure permissions** — Ask user for workspace directory and show the permissions config for confirmation:
 
 - Ask: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
 - Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
@@ -54,8 +56,8 @@ version: 1.0.0
 ## Step 1. Start Bot & Listen Loop
 
 ```bash
-# Start bot daemon
-python .claude/skills/wecom-bot/scripts/wecom_bot.py &disown 2>/dev/null &
+# Start bot daemon (or use: bash .claude/skills/wecom-bot/scripts/start.sh)
+python .claude/skills/wecom-bot/scripts/wecom_bot.py > /dev/null 2>&1 & disown
 
 # Get current message count (store as <COUNT>, 0 if file doesn't exist)
 python -c "import json,os; print(len(json.load(open('messages.json','r',encoding='utf-8'))) if os.path.exists('messages.json') else 0)"
@@ -130,6 +132,6 @@ Also suggest `/compact` on extended idle: "建议执行一次 /compact 压缩会
 **Technical notes:**
 - Reply msgtype must be `markdown` (text/stream → errcode 40008)
 - Keep messages under ~500 chars, split longer content with `sleep 2` between sends
-- Bot auto-reconnects with backoff (3s→30s), health check forces reconnect after 30min silence
+- Bot auto-reconnects with linear backoff (3s→30s), health check forces reconnect after 30min silence
 - Outbox messages survive disconnection, auto-sent on reconnect
 - Use `websocket-client` (sync), not `websockets` (async)
