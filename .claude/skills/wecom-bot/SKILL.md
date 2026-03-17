@@ -6,7 +6,7 @@ version: 1.0.0
 
 # WeCom Bot - Enterprise WeChat Bidirectional Communication
 
-## Step 0. Initialize (First Run Only)
+## Step 0. Initialize
 
 **0a. Configure credentials** — Check if `.env` exists. If not, tell user:
 
@@ -17,7 +17,20 @@ version: 1.0.0
 
   If user provides Bot ID and Secret, create `.env` with those values. Then continue.
 
-**0b. Configure permissions** — If `.claude/settings.local.json` does not exist, ask user for workspace directory, then create it:
+**0b. Configure permissions** — Always ask user for workspace directory and show the permissions config for confirmation:
+
+- Ask: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
+- Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
+- Show user the planned config and ask for confirmation:
+
+  "即将写入以下权限配置到 `.claude/settings.local.json`：
+  - 项目目录：`<absolute_project_path>/**`
+  - 工作目录：`<user_specified_dir>/**`
+  - 通用权限：Bash, Glob, Grep, WebSearch, WebFetch, Agent
+
+  确认写入吗？"
+
+- After user confirms, write the config:
 
 ```jsonc
 {
@@ -31,8 +44,6 @@ version: 1.0.0
 }
 ```
 
-- Ask: "请问您希望 Agent 在哪个目录下操作文件？（请提供绝对路径）"
-- Use `pwd` to get project path. **All paths must be absolute and end with `/**`** — relative paths cause repeated permission prompts, missing `/**` prevents recursive access.
 - After writing, tell user the following restart instructions, then **stop** — permissions require restart:
 
   "权限配置已写入，需要重启 Claude Code 才能生效：
