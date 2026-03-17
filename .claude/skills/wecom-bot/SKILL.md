@@ -6,7 +6,7 @@ version: 1.0.0
 
 # WeCom Bot - Enterprise WeChat Bidirectional Communication
 
-## Step 0. Initialize
+## Step 0. Initialize (First Run Only)
 
 **0a. Configure credentials** — Check if `.env` exists. If not, tell user:
 
