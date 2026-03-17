@@ -119,6 +119,6 @@ Also suggest `/compact` on extended idle: "建议执行一次 /compact 压缩会
 **Technical notes:**
 - Reply msgtype must be `markdown` (text/stream → errcode 40008)
 - Keep messages under ~500 chars, split longer content with `sleep 2` between sends
-- Bot auto-reconnects with backoff (3s→30s), health check forces reconnect after 5min silence
+- Bot auto-reconnects with backoff (3s→30s), health check forces reconnect after 30min silence
 - Outbox messages survive disconnection, auto-sent on reconnect
 - Use `websocket-client` (sync), not `websockets` (async)

@@ -108,12 +108,12 @@ def _kill_existing_bot():
 
 
 def health_checker():
-    """定期检查 WS 连接是否存活，超过 10 分钟无任何消息则强制断开重连"""
+    """定期检查 WS 连接是否存活，超过 30 分钟无任何消息则强制断开重连"""
     global _ws
     while True:
         time.sleep(30)
-        if _ws is not None and time.time() - _last_msg_time > 300:
-            print("HEALTH: no message in 5min, forcing reconnect...", flush=True)
+        if _ws is not None and time.time() - _last_msg_time > 1800:
+            print("HEALTH: no message in 30min, forcing reconnect...", flush=True)
             try:
                 _ws.close()
             except Exception:
