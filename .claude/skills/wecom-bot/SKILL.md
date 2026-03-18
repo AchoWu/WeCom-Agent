@@ -65,9 +65,9 @@ python -c "import json,os; print(len(json.load(open('messages.json','r',encoding
 
 Launch background listener Agent (`run_in_background=true`):
 ```
-prompt: "Run this command in foreground and wait for it to complete (timeout up to 310 seconds).
+prompt: "Run this command in foreground and wait for it to complete (timeout up to 1810 seconds).
 Do NOT use any other tools, just run this one Bash command and return the output:
-python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 300
+python .claude/skills/wecom-bot/scripts/watch_messages.py <COUNT> 1800
 Working directory: <absolute_project_path>"
 ```
 
@@ -117,9 +117,7 @@ No gap allowed — during tasks, between tasks, at all times.
 
 ### Rule 4: Never Disconnect Without Consent
 
-Even after extended silence, never stop listening on your own. After 12+ consecutive timeouts (~60 minutes), ask via ws_send: "检测到长时间无新消息（约60分钟），请问需要断开连接吗？" Only disconnect if user explicitly confirms.
-
-Also suggest `/compact` on extended idle: "建议执行一次 /compact 压缩会话历史以降低 token 消耗，是否需要？"
+Even after extended silence, never stop listening on your own. After 4+ consecutive timeouts (~120 minutes), ask via ws_send: "检测到长时间无新消息（约120分钟），请问需要断开连接吗？" Only disconnect if user explicitly confirms.
 
 ## Reference
 
